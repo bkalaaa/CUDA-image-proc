@@ -1,6 +1,7 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include "cli.h"
+#include "cpu_pipeline.h"
 
 int main(int argc, char* argv[]) {
     CLIArgs args = CLIParser::parse(argc, argv);
@@ -45,9 +46,31 @@ int main(int argc, char* argv[]) {
         std::cout << "CUDA Block Size: " << args.block_size << "x" << args.block_size << "\n";
     }
     
-    std::cout << "\nOpenCV Version: " << cv::getVersionString() << "\n";
+    std::cout << "\nOpenCV Version: " << cv::getVersionString() << "\n\n";
     
-    std::cout << "\nCLI parsing successful. Implementation pending in future commits.\n";
+    bool processing_success = false;
     
-    return 0;
+    if (args.mode == ProcessingMode::CPU) {
+        std::cout << "Starting CPU processing...\n";
+        
+        CPUPipeline cpu_pipeline(args.rgb_mode);
+        
+        if (!args.batch_directory.empty()) {
+            processing_success = cpu_pipeline.process_batch(args.batch_directory, args.operations);
+        } else {
+            processing_success = cpu_pipeline.process_single_image(args.single_image, args.operations);
+        }
+        
+        if (processing_success) {
+            std::cout << "\nCPU processing completed successfully!\n";
+            std::cout << "Output files saved to: output/\n";
+        } else {
+            std::cout << "\nCPU processing completed with errors.\n";
+        }
+    } else {
+        std::cout << "GPU processing not yet implemented. Use --mode cpu for now.\n";
+        return 1;
+    }
+    
+    return processing_success ? 0 : 1;
 }
