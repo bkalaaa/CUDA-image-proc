@@ -1,8 +1,10 @@
 set(SOURCES
     main.cpp
+    cli.cpp
 )
 
 set(HEADERS
+    cli.h
 )
 
 # Create main executable
