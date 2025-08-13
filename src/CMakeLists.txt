@@ -2,11 +2,13 @@ set(SOURCES
     main.cpp
     cli.cpp
     cpu_pipeline.cpp
+    benchmark.cpp
 )
 
 set(HEADERS
     cli.h
     cpu_pipeline.h
+    benchmark.h
 )
 
 # Create main executable

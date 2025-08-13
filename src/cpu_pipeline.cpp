@@ -89,6 +89,90 @@ bool CPUPipeline::process_batch(const std::string& batch_dir,
     return all_success;
 }
 
+bool CPUPipeline::process_single_image_with_benchmark(const std::string& input_path, 
+                                                    const std::set<Operation>& operations,
+                                                    BenchmarkRunner& benchmark) {
+    std::cout << "Processing: " << input_path << std::endl;
+    
+    cv::Mat input_image = load_and_prepare_image(input_path);
+    if (input_image.empty()) {
+        std::cerr << "Error: Could not load image " << input_path << std::endl;
+        return false;
+    }
+    
+    benchmark.increment_image_count();
+    bool success = true;
+    
+    for (const auto& operation : operations) {
+        cv::Mat result;
+        std::string op_name;
+        
+        benchmark.start_operation(operation);
+        
+        switch (operation) {
+            case Operation::GAUSSIAN:
+                result = apply_gaussian_smoothing(input_image);
+                op_name = "Gaussian smoothing";
+                break;
+            case Operation::SOBEL:
+                result = apply_sobel_edge_detection(input_image);
+                op_name = "Sobel edge detection";
+                break;
+            case Operation::CANNY:
+                result = apply_canny_edge_detection(input_image);
+                op_name = "Canny edge detection";
+                break;
+            case Operation::HISTOGRAM:
+                result = apply_histogram_equalization(input_image);
+                op_name = "Histogram equalization";
+                break;
+        }
+        
+        benchmark.end_operation(operation);
+        
+        if (!result.empty()) {
+            std::string output_path = generate_output_filename(input_path, operation);
+            if (save_processed_image(result, output_path)) {
+                std::cout << "  " << op_name << " -> " << output_path << std::endl;
+            } else {
+                std::cerr << "  Error saving " << op_name << " result" << std::endl;
+                success = false;
+            }
+        } else {
+            std::cerr << "  Error applying " << op_name << std::endl;
+            success = false;
+        }
+    }
+    
+    return success;
+}
+
+bool CPUPipeline::process_batch_with_benchmark(const std::string& batch_dir, 
+                                              const std::set<Operation>& operations,
+                                              BenchmarkRunner& benchmark) {
+    std::vector<std::string> image_files = get_image_files(batch_dir);
+    
+    if (image_files.empty()) {
+        std::cerr << "No supported image files found in " << batch_dir << std::endl;
+        return false;
+    }
+    
+    std::cout << "Found " << image_files.size() << " image(s) to process" << std::endl;
+    
+    benchmark.start_total_timer();
+    
+    bool all_success = true;
+    for (const auto& image_path : image_files) {
+        if (!process_single_image_with_benchmark(image_path, operations, benchmark)) {
+            all_success = false;
+        }
+    }
+    
+    benchmark.end_total_timer();
+    
+    return all_success;
+}
+
 cv::Mat CPUPipeline::apply_gaussian_smoothing(const cv::Mat& input) {
     cv::Mat result;
     

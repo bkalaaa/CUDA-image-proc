@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include "cli.h"
+#include "benchmark.h"
 
 class CPUPipeline {
 public:
@@ -14,6 +15,14 @@ public:
     
     bool process_batch(const std::string& batch_dir, 
                       const std::set<Operation>& operations);
+    
+    bool process_single_image_with_benchmark(const std::string& input_path, 
+                                            const std::set<Operation>& operations,
+                                            BenchmarkRunner& benchmark);
+    
+    bool process_batch_with_benchmark(const std::string& batch_dir, 
+                                     const std::set<Operation>& operations,
+                                     BenchmarkRunner& benchmark);
     
     void set_output_directory(const std::string& output_dir);
     

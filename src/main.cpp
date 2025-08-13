@@ -2,6 +2,7 @@
 #include <opencv2/opencv.hpp>
 #include "cli.h"
 #include "cpu_pipeline.h"
+#include "benchmark.h"
 
 int main(int argc, char* argv[]) {
     CLIArgs args = CLIParser::parse(argc, argv);
@@ -51,21 +52,33 @@ int main(int argc, char* argv[]) {
     bool processing_success = false;
     
     if (args.mode == ProcessingMode::CPU) {
-        std::cout << "Starting CPU processing...\n";
+        std::cout << "Starting CPU processing with benchmarking...\n";
         
         CPUPipeline cpu_pipeline(args.rgb_mode);
+        BenchmarkRunner benchmark(args.mode, args.rgb_mode);
         
         if (!args.batch_directory.empty()) {
-            processing_success = cpu_pipeline.process_batch(args.batch_directory, args.operations);
+            processing_success = cpu_pipeline.process_batch_with_benchmark(
+                args.batch_directory, args.operations, benchmark);
         } else {
-            processing_success = cpu_pipeline.process_single_image(args.single_image, args.operations);
+            benchmark.start_total_timer();
+            processing_success = cpu_pipeline.process_single_image_with_benchmark(
+                args.single_image, args.operations, benchmark);
+            benchmark.end_total_timer();
         }
         
         if (processing_success) {
             std::cout << "\nCPU processing completed successfully!\n";
             std::cout << "Output files saved to: output/\n";
+            
+            BenchmarkResults results = benchmark.get_results();
+            results.print_summary();
         } else {
             std::cout << "\nCPU processing completed with errors.\n";
+            BenchmarkResults results = benchmark.get_results();
+            if (results.total_images > 0) {
+                results.print_summary();
+            }
         }
     } else {
         std::cout << "GPU processing not yet implemented. Use --mode cpu for now.\n";
