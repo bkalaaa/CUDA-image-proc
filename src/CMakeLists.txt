@@ -3,12 +3,14 @@ set(SOURCES
     cli.cpp
     cpu_pipeline.cpp
     benchmark.cpp
+    cuda_utils.cu
 )
 
 set(HEADERS
     cli.h
     cpu_pipeline.h
     benchmark.h
+    cuda_utils.h
 )
 
 # Create main executable
