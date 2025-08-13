@@ -2,15 +2,19 @@ set(SOURCES
     main.cpp
     cli.cpp
     cpu_pipeline.cpp
+    gpu_pipeline.cpp
     benchmark.cpp
     cuda_utils.cu
+    image_io.cpp
 )
 
 set(HEADERS
     cli.h
     cpu_pipeline.h
+    gpu_pipeline.h
     benchmark.h
     cuda_utils.h
+    image_io.h
 )
 
 # Create main executable

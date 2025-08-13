@@ -2,8 +2,10 @@
 #include <opencv2/opencv.hpp>
 #include "cli.h"
 #include "cpu_pipeline.h"
+#include "gpu_pipeline.h"
 #include "benchmark.h"
 #include "cuda_utils.h"
+#include "image_io.h"
 
 int main(int argc, char* argv[]) {
     CLIArgs args = CLIParser::parse(argc, argv);
@@ -108,10 +110,42 @@ int main(int argc, char* argv[]) {
                 results.print_summary();
             }
         } else {
-            std::cout << "CUDA initialized successfully. GPU processing not yet implemented.\n";
-            std::cout << "Use --mode cpu for now.\n";
-            cuda_context.cleanup();
-            return 1;
+            std::cout << "Starting GPU processing with I/O pipeline...\n";
+            
+            GPUPipeline gpu_pipeline(args.rgb_mode, args.block_size);
+            BenchmarkRunner benchmark(args.mode, args.rgb_mode);
+            
+            if (!gpu_pipeline.initialize()) {
+                std::cerr << "Failed to initialize GPU pipeline\n";
+                cuda_context.cleanup();
+                return 1;
+            }
+            
+            if (!args.batch_directory.empty()) {
+                processing_success = gpu_pipeline.process_batch_with_benchmark(
+                    args.batch_directory, args.operations, benchmark);
+            } else {
+                benchmark.start_total_timer();
+                processing_success = gpu_pipeline.process_single_image_with_benchmark(
+                    args.single_image, args.operations, benchmark);
+                benchmark.end_total_timer();
+            }
+            
+            if (processing_success) {
+                std::cout << "\nGPU processing completed successfully!\n";
+                std::cout << "Output files saved to: output/\n";
+                
+                BenchmarkResults results = benchmark.get_results();
+                results.print_summary();
+            } else {
+                std::cout << "\nGPU processing completed with errors.\n";
+                BenchmarkResults results = benchmark.get_results();
+                if (results.total_images > 0) {
+                    results.print_summary();
+                }
+            }
+            
+            gpu_pipeline.cleanup();
         }
     }
     
