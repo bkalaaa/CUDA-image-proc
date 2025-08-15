@@ -6,6 +6,7 @@ set(SOURCES
     benchmark.cpp
     cuda_utils.cu
     image_io.cpp
+    cuda_streams.cu
 )
 
 set(HEADERS
@@ -15,6 +16,7 @@ set(HEADERS
     benchmark.h
     cuda_utils.h
     image_io.h
+    cuda_streams.h
 )
 
 # Create main executable

@@ -6,7 +6,7 @@
 namespace fs = std::filesystem;
 
 GPUPipeline::GPUPipeline(bool rgb_mode, int block_size) 
-    : rgb_mode_(rgb_mode), block_size_(block_size) {
+    : rgb_mode_(rgb_mode), block_size_(block_size), streaming_enabled_(true) {
     output_directory_ = "output";
     fs::create_directories(output_directory_);
     cuda_context_ = std::make_unique<CudaContext>();
@@ -134,6 +134,38 @@ bool GPUPipeline::process_batch_with_benchmark(const std::string& batch_dir,
     benchmark.end_total_timer();
     
     return all_success;
+}
+
+bool GPUPipeline::process_batch_with_streaming(const std::string& batch_dir,
+                                              const std::set<Operation>& operations,
+                                              BenchmarkRunner& benchmark) {
+    std::vector<std::string> image_files = get_image_files(batch_dir);
+    
+    if (image_files.empty()) {
+        std::cerr << "No supported image files found in " << batch_dir << std::endl;
+        return false;
+    }
+    
+    if (!streaming_enabled_ || image_files.size() < 3) {
+        std::cout << "Using standard batch processing (streaming disabled or too few images)" << std::endl;
+        return process_batch_with_benchmark(batch_dir, operations, benchmark);
+    }
+    
+    std::cout << "Using streaming pipeline for batch processing" << std::endl;
+    
+    StreamingPipeline streaming_pipeline(rgb_mode_, block_size_);
+    streaming_pipeline.set_output_directory(output_directory_);
+    
+    if (!streaming_pipeline.initialize()) {
+        std::cerr << "Failed to initialize streaming pipeline, falling back to standard processing" << std::endl;
+        return process_batch_with_benchmark(batch_dir, operations, benchmark);
+    }
+    
+    bool success = streaming_pipeline.process_batch_streamed(image_files, operations, benchmark);
+    
+    streaming_pipeline.cleanup();
+    
+    return success;
 }
 
 bool GPUPipeline::process_single_operation(const cv::Mat& input_image, 

@@ -122,7 +122,7 @@ int main(int argc, char* argv[]) {
             }
             
             if (!args.batch_directory.empty()) {
-                processing_success = gpu_pipeline.process_batch_with_benchmark(
+                processing_success = gpu_pipeline.process_batch_with_streaming(
                     args.batch_directory, args.operations, benchmark);
             } else {
                 benchmark.start_total_timer();

@@ -8,6 +8,7 @@
 #include "benchmark.h"
 #include "cuda_utils.h"
 #include "image_io.h"
+#include "cuda_streams.h"
 
 class GPUPipeline {
 public:
@@ -31,12 +32,18 @@ public:
                                      const std::set<Operation>& operations,
                                      BenchmarkRunner& benchmark);
     
+    bool process_batch_with_streaming(const std::string& batch_dir,
+                                     const std::set<Operation>& operations,
+                                     BenchmarkRunner& benchmark);
+    
     void set_output_directory(const std::string& output_dir);
     void set_block_size(int block_size);
+    void enable_streaming(bool enable) { streaming_enabled_ = enable; }
     
 private:
     bool rgb_mode_;
     int block_size_;
+    bool streaming_enabled_;
     std::string output_directory_;
     std::unique_ptr<CudaContext> cuda_context_;
     
