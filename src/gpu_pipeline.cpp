@@ -331,7 +331,7 @@ bool GPUPipeline::apply_gaussian_smoothing_gpu(const ImageBuffer& input, ImageBu
         return false;
     }
     
-    return gaussian_kernel_->apply_gaussian_separable(input, output);
+    return gaussian_kernel_->apply_gaussian_separable_shared(input, output);
 }
 
 bool GPUPipeline::apply_sobel_edge_detection_gpu(const ImageBuffer& input, ImageBuffer& output) {

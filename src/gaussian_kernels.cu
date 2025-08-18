@@ -1,4 +1,5 @@
 #include "gaussian_kernels.h"
+#include "gaussian_shared.h"
 #include <iostream>
 #include <cmath>
 #include <algorithm>
@@ -6,7 +7,8 @@
 __constant__ float d_gaussian_weights[MAX_GAUSSIAN_SIZE];
 
 GaussianKernelManager::GaussianKernelManager() 
-    : sigma_(0.0f), radius_(0), size_(0), host_weights_(nullptr), initialized_(false) {}
+    : sigma_(0.0f), radius_(0), size_(0), host_weights_(nullptr), initialized_(false),
+      shared_memory_kernel_(nullptr) {}
 
 GaussianKernelManager::~GaussianKernelManager() {
     cleanup();
@@ -49,6 +51,10 @@ void GaussianKernelManager::cleanup() {
     if (host_weights_) {
         delete[] host_weights_;
         host_weights_ = nullptr;
+    }
+    if (shared_memory_kernel_) {
+        delete shared_memory_kernel_;
+        shared_memory_kernel_ = nullptr;
     }
     initialized_ = false;
 }
@@ -116,6 +122,27 @@ bool GaussianKernelManager::apply_gaussian_separable(const ImageBuffer& input,
     }
     
     return true;
+}
+
+bool GaussianKernelManager::apply_gaussian_separable_shared(const ImageBuffer& input, 
+                                                           ImageBuffer& output, 
+                                                           cudaStream_t stream) const {
+    if (!initialized_) {
+        std::cerr << "Gaussian kernel manager not initialized" << std::endl;
+        return false;
+    }
+    
+    if (!shared_memory_kernel_) {
+        shared_memory_kernel_ = new SharedMemoryGaussian();
+        if (!shared_memory_kernel_->initialize(sigma_, radius_)) {
+            delete shared_memory_kernel_;
+            shared_memory_kernel_ = nullptr;
+            std::cerr << "Failed to initialize shared memory Gaussian kernel" << std::endl;
+            return false;
+        }
+    }
+    
+    return shared_memory_kernel_->apply_gaussian_shared(input, output, stream);
 }
 
 bool GaussianKernelManager::apply_gaussian_horizontal(const unsigned char* input,

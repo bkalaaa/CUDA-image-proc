@@ -24,6 +24,9 @@ public:
     bool apply_gaussian_separable(const ImageBuffer& input, ImageBuffer& output, 
                                  cudaStream_t stream = 0) const;
     
+    bool apply_gaussian_separable_shared(const ImageBuffer& input, ImageBuffer& output,
+                                        cudaStream_t stream = 0) const;
+    
     bool apply_gaussian_horizontal(const unsigned char* input, unsigned char* output,
                                   int width, int height, int channels,
                                   cudaStream_t stream = 0) const;
@@ -40,6 +43,7 @@ private:
     int size_;
     float* host_weights_;
     bool initialized_;
+    mutable class SharedMemoryGaussian* shared_memory_kernel_;
     
     bool generate_weights();
     bool upload_weights_to_constant_memory() const;

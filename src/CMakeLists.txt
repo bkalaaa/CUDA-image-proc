@@ -8,6 +8,7 @@ set(SOURCES
     image_io.cpp
     cuda_streams.cu
     gaussian_kernels.cu
+    gaussian_shared.cu
 )
 
 set(HEADERS
@@ -19,6 +20,7 @@ set(HEADERS
     image_io.h
     cuda_streams.h
     gaussian_kernels.h
+    gaussian_shared.h
 )
 
 # Create main executable

@@ -536,7 +536,7 @@ bool StreamingPipeline::apply_operation_gpu_streamed(const ImageBuffer& input,
             if (!gaussian_kernel.initialize(3.0f)) {
                 return false;
             }
-            return gaussian_kernel.apply_gaussian_separable(input, output, stream);
+            return gaussian_kernel.apply_gaussian_separable_shared(input, output, stream);
         }
         case Operation::SOBEL:
         case Operation::CANNY:
