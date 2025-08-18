@@ -2,7 +2,7 @@
 build/
 cmake-build-*/
 *.build
-
+commits.txt
 # CMake generated files
 CMakeCache.txt
 CMakeFiles/

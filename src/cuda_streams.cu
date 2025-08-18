@@ -1,4 +1,5 @@
 #include "cuda_streams.h"
+#include "gaussian_kernels.h"
 #include <iostream>
 #include <algorithm>
 #include <filesystem>
@@ -527,18 +528,31 @@ bool StreamingPipeline::apply_operation_gpu_streamed(const ImageBuffer& input,
                                                     ImageBuffer& output, 
                                                     Operation operation,
                                                     cudaStream_t stream) {
-    std::cout << "      Stream GPU operation placeholder for " 
-              << operation_to_string(operation) << std::endl;
-    
     const ImageMetadata& metadata = input.get_metadata();
     
-    cudaError_t error = cudaMemcpyAsync(output.get_device_ptr(), 
-                                       input.get_device_ptr(),
-                                       metadata.total_bytes,
-                                       cudaMemcpyDeviceToDevice,
-                                       stream);
-    
-    return error == cudaSuccess;
+    switch (operation) {
+        case Operation::GAUSSIAN: {
+            GaussianKernelManager gaussian_kernel;
+            if (!gaussian_kernel.initialize(3.0f)) {
+                return false;
+            }
+            return gaussian_kernel.apply_gaussian_separable(input, output, stream);
+        }
+        case Operation::SOBEL:
+        case Operation::CANNY:
+        case Operation::HISTOGRAM:
+        default:
+            std::cout << "      Stream GPU operation placeholder for " 
+                      << operation_to_string(operation) << std::endl;
+            
+            cudaError_t error = cudaMemcpyAsync(output.get_device_ptr(), 
+                                               input.get_device_ptr(),
+                                               metadata.total_bytes,
+                                               cudaMemcpyDeviceToDevice,
+                                               stream);
+            
+            return error == cudaSuccess;
+    }
 }
 
 StreamBenchmark::StreamBenchmark() : current_stage_(PipelineStage::TRANSFER_H2D) {}

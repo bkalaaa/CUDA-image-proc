@@ -9,6 +9,7 @@
 #include "cuda_utils.h"
 #include "image_io.h"
 #include "cuda_streams.h"
+#include "gaussian_kernels.h"
 
 class GPUPipeline {
 public:
@@ -46,6 +47,7 @@ private:
     bool streaming_enabled_;
     std::string output_directory_;
     std::unique_ptr<CudaContext> cuda_context_;
+    std::unique_ptr<GaussianKernelManager> gaussian_kernel_;
     
     bool process_single_operation(const cv::Mat& input_image, 
                                  const std::string& input_path,

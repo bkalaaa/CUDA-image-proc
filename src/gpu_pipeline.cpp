@@ -10,6 +10,7 @@ GPUPipeline::GPUPipeline(bool rgb_mode, int block_size)
     output_directory_ = "output";
     fs::create_directories(output_directory_);
     cuda_context_ = std::make_unique<CudaContext>();
+    gaussian_kernel_ = std::make_unique<GaussianKernelManager>();
 }
 
 GPUPipeline::~GPUPipeline() {
@@ -22,14 +23,23 @@ bool GPUPipeline::initialize() {
         return false;
     }
     
+    if (!gaussian_kernel_->initialize(3.0f)) {
+        std::cerr << "Failed to initialize Gaussian kernel" << std::endl;
+        return false;
+    }
+    
     std::cout << "GPU Pipeline initialized successfully" << std::endl;
     std::cout << "Block size: " << block_size_ << "x" << block_size_ << std::endl;
     std::cout << "RGB mode: " << (rgb_mode_ ? "enabled" : "disabled") << std::endl;
+    gaussian_kernel_->print_kernel_info();
     
     return true;
 }
 
 void GPUPipeline::cleanup() {
+    if (gaussian_kernel_) {
+        gaussian_kernel_->cleanup();
+    }
     if (cuda_context_) {
         cuda_context_->cleanup();
     }
@@ -316,21 +326,12 @@ bool GPUPipeline::apply_operation_gpu(const ImageBuffer& input, ImageBuffer& out
 }
 
 bool GPUPipeline::apply_gaussian_smoothing_gpu(const ImageBuffer& input, ImageBuffer& output) {
-    std::cout << "    GPU Gaussian smoothing not yet implemented, using placeholder" << std::endl;
-    
-    const ImageMetadata& metadata = input.get_metadata();
-    
-    if (!output.allocate_host(metadata)) {
+    if (!gaussian_kernel_) {
+        std::cerr << "Gaussian kernel not initialized" << std::endl;
         return false;
     }
     
-    if (!input.copy_device_to_host()) {
-        return false;
-    }
-    
-    std::memcpy(output.get_host_ptr(), input.get_host_ptr(), metadata.total_bytes);
-    
-    return output.copy_host_to_device();
+    return gaussian_kernel_->apply_gaussian_separable(input, output);
 }
 
 bool GPUPipeline::apply_sobel_edge_detection_gpu(const ImageBuffer& input, ImageBuffer& output) {
