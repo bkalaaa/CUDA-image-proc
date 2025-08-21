@@ -11,6 +11,7 @@ GPUPipeline::GPUPipeline(bool rgb_mode, int block_size)
     fs::create_directories(output_directory_);
     cuda_context_ = std::make_unique<CudaContext>();
     gaussian_kernel_ = std::make_unique<GaussianKernelManager>();
+    sobel_kernel_ = std::make_unique<SobelKernelManager>();
 }
 
 GPUPipeline::~GPUPipeline() {
@@ -28,10 +29,16 @@ bool GPUPipeline::initialize() {
         return false;
     }
     
+    if (!sobel_kernel_->initialize(block_size_)) {
+        std::cerr << "Failed to initialize Sobel kernel" << std::endl;
+        return false;
+    }
+    
     std::cout << "GPU Pipeline initialized successfully" << std::endl;
     std::cout << "Block size: " << block_size_ << "x" << block_size_ << std::endl;
     std::cout << "RGB mode: " << (rgb_mode_ ? "enabled" : "disabled") << std::endl;
     gaussian_kernel_->print_kernel_info();
+    sobel_kernel_->get_config().print_config();
     
     return true;
 }
@@ -39,6 +46,9 @@ bool GPUPipeline::initialize() {
 void GPUPipeline::cleanup() {
     if (gaussian_kernel_) {
         gaussian_kernel_->cleanup();
+    }
+    if (sobel_kernel_) {
+        sobel_kernel_->cleanup();
     }
     if (cuda_context_) {
         cuda_context_->cleanup();
@@ -335,21 +345,12 @@ bool GPUPipeline::apply_gaussian_smoothing_gpu(const ImageBuffer& input, ImageBu
 }
 
 bool GPUPipeline::apply_sobel_edge_detection_gpu(const ImageBuffer& input, ImageBuffer& output) {
-    std::cout << "    GPU Sobel edge detection not yet implemented, using placeholder" << std::endl;
-    
-    const ImageMetadata& metadata = input.get_metadata();
-    
-    if (!output.allocate_host(metadata)) {
+    if (!sobel_kernel_) {
+        std::cerr << "Sobel kernel not initialized" << std::endl;
         return false;
     }
     
-    if (!input.copy_device_to_host()) {
-        return false;
-    }
-    
-    std::memcpy(output.get_host_ptr(), input.get_host_ptr(), metadata.total_bytes);
-    
-    return output.copy_host_to_device();
+    return sobel_kernel_->apply_sobel_shared_fused(input, output);
 }
 
 bool GPUPipeline::apply_canny_edge_detection_gpu(const ImageBuffer& input, ImageBuffer& output) {

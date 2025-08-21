@@ -10,6 +10,7 @@
 #include "image_io.h"
 #include "cuda_streams.h"
 #include "gaussian_kernels.h"
+#include "sobel_kernels.h"
 
 class GPUPipeline {
 public:
@@ -48,6 +49,7 @@ private:
     std::string output_directory_;
     std::unique_ptr<CudaContext> cuda_context_;
     std::unique_ptr<GaussianKernelManager> gaussian_kernel_;
+    std::unique_ptr<SobelKernelManager> sobel_kernel_;
     
     bool process_single_operation(const cv::Mat& input_image, 
                                  const std::string& input_path,

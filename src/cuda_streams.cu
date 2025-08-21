@@ -1,5 +1,6 @@
 #include "cuda_streams.h"
 #include "gaussian_kernels.h"
+#include "sobel_kernels.h"
 #include <iostream>
 #include <algorithm>
 #include <filesystem>
@@ -538,7 +539,13 @@ bool StreamingPipeline::apply_operation_gpu_streamed(const ImageBuffer& input,
             }
             return gaussian_kernel.apply_gaussian_separable_shared(input, output, stream);
         }
-        case Operation::SOBEL:
+        case Operation::SOBEL: {
+            SobelKernelManager sobel_kernel;
+            if (!sobel_kernel.initialize()) {
+                return false;
+            }
+            return sobel_kernel.apply_sobel_shared_fused(input, output, stream);
+        }
         case Operation::CANNY:
         case Operation::HISTOGRAM:
         default:

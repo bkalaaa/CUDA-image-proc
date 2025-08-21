@@ -9,6 +9,7 @@ set(SOURCES
     cuda_streams.cu
     gaussian_kernels.cu
     gaussian_shared.cu
+    sobel_kernels.cu
 )
 
 set(HEADERS
@@ -21,6 +22,7 @@ set(HEADERS
     cuda_streams.h
     gaussian_kernels.h
     gaussian_shared.h
+    sobel_kernels.h
 )
 
 # Create main executable
