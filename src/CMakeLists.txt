@@ -10,6 +10,7 @@ set(SOURCES
     gaussian_kernels.cu
     gaussian_shared.cu
     sobel_kernels.cu
+    histogram_kernels.cu
 )
 
 set(HEADERS
@@ -23,6 +24,7 @@ set(HEADERS
     gaussian_kernels.h
     gaussian_shared.h
     sobel_kernels.h
+    histogram_kernels.h
 )
 
 # Create main executable

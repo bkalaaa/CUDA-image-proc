@@ -11,6 +11,7 @@
 #include "cuda_streams.h"
 #include "gaussian_kernels.h"
 #include "sobel_kernels.h"
+#include "histogram_kernels.h"
 
 class GPUPipeline {
 public:
@@ -50,6 +51,7 @@ private:
     std::unique_ptr<CudaContext> cuda_context_;
     std::unique_ptr<GaussianKernelManager> gaussian_kernel_;
     std::unique_ptr<SobelKernelManager> sobel_kernel_;
+    std::unique_ptr<HistogramKernelManager> histogram_kernel_;
     
     bool process_single_operation(const cv::Mat& input_image, 
                                  const std::string& input_path,

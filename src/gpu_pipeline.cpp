@@ -12,6 +12,7 @@ GPUPipeline::GPUPipeline(bool rgb_mode, int block_size)
     cuda_context_ = std::make_unique<CudaContext>();
     gaussian_kernel_ = std::make_unique<GaussianKernelManager>();
     sobel_kernel_ = std::make_unique<SobelKernelManager>();
+    histogram_kernel_ = std::make_unique<HistogramKernelManager>();
 }
 
 GPUPipeline::~GPUPipeline() {
@@ -34,11 +35,17 @@ bool GPUPipeline::initialize() {
         return false;
     }
     
+    if (!histogram_kernel_->initialize(block_size_)) {
+        std::cerr << "Failed to initialize Histogram kernel" << std::endl;
+        return false;
+    }
+    
     std::cout << "GPU Pipeline initialized successfully" << std::endl;
     std::cout << "Block size: " << block_size_ << "x" << block_size_ << std::endl;
     std::cout << "RGB mode: " << (rgb_mode_ ? "enabled" : "disabled") << std::endl;
     gaussian_kernel_->print_kernel_info();
     sobel_kernel_->get_config().print_config();
+    histogram_kernel_->get_config().print_config();
     
     return true;
 }
@@ -49,6 +56,9 @@ void GPUPipeline::cleanup() {
     }
     if (sobel_kernel_) {
         sobel_kernel_->cleanup();
+    }
+    if (histogram_kernel_) {
+        histogram_kernel_->cleanup();
     }
     if (cuda_context_) {
         cuda_context_->cleanup();
@@ -372,19 +382,14 @@ bool GPUPipeline::apply_canny_edge_detection_gpu(const ImageBuffer& input, Image
 }
 
 bool GPUPipeline::apply_histogram_equalization_gpu(const ImageBuffer& input, ImageBuffer& output) {
-    std::cout << "    GPU Histogram equalization not yet implemented, using placeholder" << std::endl;
-    
-    const ImageMetadata& metadata = input.get_metadata();
-    
-    if (!output.allocate_host(metadata)) {
+    if (!histogram_kernel_) {
+        std::cerr << "Histogram kernel not initialized" << std::endl;
         return false;
     }
     
-    if (!input.copy_device_to_host()) {
-        return false;
+    if (rgb_mode_) {
+        return histogram_kernel_->apply_histogram_equalization_rgb(input, output);
+    } else {
+        return histogram_kernel_->apply_histogram_equalization(input, output);
     }
-    
-    std::memcpy(output.get_host_ptr(), input.get_host_ptr(), metadata.total_bytes);
-    
-    return output.copy_host_to_device();
 }

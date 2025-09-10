@@ -1,6 +1,7 @@
 #include "cuda_streams.h"
 #include "gaussian_kernels.h"
 #include "sobel_kernels.h"
+#include "histogram_kernels.h"
 #include <iostream>
 #include <algorithm>
 #include <filesystem>
@@ -546,8 +547,14 @@ bool StreamingPipeline::apply_operation_gpu_streamed(const ImageBuffer& input,
             }
             return sobel_kernel.apply_sobel_shared_fused(input, output, stream);
         }
+        case Operation::HISTOGRAM: {
+            HistogramKernelManager histogram_kernel;
+            if (!histogram_kernel.initialize()) {
+                return false;
+            }
+            return histogram_kernel.apply_histogram_equalization(input, output, stream);
+        }
         case Operation::CANNY:
-        case Operation::HISTOGRAM:
         default:
             std::cout << "      Stream GPU operation placeholder for " 
                       << operation_to_string(operation) << std::endl;
