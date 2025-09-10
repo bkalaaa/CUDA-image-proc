@@ -48,6 +48,7 @@ struct BenchmarkResults {
     void finalize_results();
     void print_summary() const;
     void print_detailed() const;
+    void print_rgb_comparison(const BenchmarkResults& grayscale_results) const;
     
 private:
     std::map<Operation, double> operation_times_;

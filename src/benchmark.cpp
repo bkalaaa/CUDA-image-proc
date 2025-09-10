@@ -184,3 +184,53 @@ std::string format_throughput(double images_per_sec) {
     }
     return oss.str();
 }
+
+void BenchmarkResults::print_rgb_comparison(const BenchmarkResults& grayscale_results) const {
+    if (!rgb_mode || grayscale_results.rgb_mode) {
+        std::cout << "RGB comparison requires RGB results vs grayscale results" << std::endl;
+        return;
+    }
+    
+    std::cout << "\n" << std::string(60, '=') << std::endl;
+    std::cout << "RGB vs GRAYSCALE PERFORMANCE COMPARISON" << std::endl;
+    std::cout << std::string(60, '=') << std::endl;
+    
+    std::cout << std::fixed << std::setprecision(2);
+    
+    std::cout << "Mode: " << (mode == ProcessingMode::CPU ? "CPU" : "GPU") << std::endl;
+    std::cout << "Total Images: " << total_images << std::endl;
+    
+    std::cout << "\nOverall Performance:" << std::endl;
+    std::cout << "  RGB Processing:       " << total_processing_time_ms << " ms" << std::endl;
+    std::cout << "  Grayscale Processing: " << grayscale_results.total_processing_time_ms << " ms" << std::endl;
+    
+    double rgb_overhead = (total_processing_time_ms / grayscale_results.total_processing_time_ms - 1.0) * 100.0;
+    std::cout << "  RGB Overhead:         " << rgb_overhead << "%" << std::endl;
+    
+    std::cout << "\nThroughput Comparison:" << std::endl;
+    std::cout << "  RGB:                  " << total_throughput_images_per_sec << " images/sec" << std::endl;
+    std::cout << "  Grayscale:            " << grayscale_results.total_throughput_images_per_sec << " images/sec" << std::endl;
+    
+    std::cout << "\nPer-Operation Performance:" << std::endl;
+    for (size_t i = 0; i < operation_results.size() && i < grayscale_results.operation_results.size(); ++i) {
+        const auto& rgb_op = operation_results[i];
+        const auto& gray_op = grayscale_results.operation_results[i];
+        
+        if (rgb_op.operation == gray_op.operation) {
+            std::string op_name = operation_to_string(rgb_op.operation);
+            double performance_ratio = rgb_op.avg_time_per_image_ms / gray_op.avg_time_per_image_ms;
+            
+            std::cout << "  " << op_name << ":" << std::endl;
+            std::cout << "    RGB:       " << rgb_op.avg_time_per_image_ms << " ms/image" << std::endl;
+            std::cout << "    Grayscale: " << gray_op.avg_time_per_image_ms << " ms/image" << std::endl;
+            std::cout << "    Ratio:     " << performance_ratio << "x" << std::endl;
+        }
+    }
+    
+    std::cout << "\nMemory and Channel Analysis:" << std::endl;
+    std::cout << "  RGB uses 3x memory bandwidth compared to grayscale" << std::endl;
+    std::cout << "  Expected theoretical slowdown: ~3x for memory-bound operations" << std::endl;
+    std::cout << "  Actual average slowdown: " << (total_processing_time_ms / grayscale_results.total_processing_time_ms) << "x" << std::endl;
+    
+    std::cout << std::string(60, '=') << std::endl;
+}

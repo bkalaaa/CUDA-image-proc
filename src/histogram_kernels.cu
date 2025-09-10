@@ -162,16 +162,80 @@ bool HistogramKernelManager::apply_histogram_equalization_rgb(const ImageBuffer&
         return false;
     }
     
+    DeviceMemory<int> hist_r_buffer, hist_g_buffer, hist_b_buffer;
     DeviceMemory<float> cdf_r_buffer, cdf_g_buffer, cdf_b_buffer;
     
-    if (!cdf_r_buffer.allocate(HIST_SIZE) || 
-        !cdf_g_buffer.allocate(HIST_SIZE) || 
-        !cdf_b_buffer.allocate(HIST_SIZE)) {
+    if (!hist_r_buffer.allocate(HIST_SIZE) || !hist_g_buffer.allocate(HIST_SIZE) || !hist_b_buffer.allocate(HIST_SIZE) ||
+        !cdf_r_buffer.allocate(HIST_SIZE) || !cdf_g_buffer.allocate(HIST_SIZE) || !cdf_b_buffer.allocate(HIST_SIZE)) {
         return false;
     }
     
-    std::cout << "    RGB histogram equalization not fully implemented, using grayscale" << std::endl;
-    return apply_histogram_equalization(input, output, stream);
+    if (!compute_rgb_histograms(input, hist_r_buffer.get_ptr(), hist_g_buffer.get_ptr(), hist_b_buffer.get_ptr(), stream)) {
+        return false;
+    }
+    
+    int total_pixels = metadata.width * metadata.height;
+    
+    if (!compute_cdf(hist_r_buffer.get_ptr(), cdf_r_buffer.get_ptr(), total_pixels) ||
+        !compute_cdf(hist_g_buffer.get_ptr(), cdf_g_buffer.get_ptr(), total_pixels) ||
+        !compute_cdf(hist_b_buffer.get_ptr(), cdf_b_buffer.get_ptr(), total_pixels)) {
+        return false;
+    }
+    
+    return apply_rgb_histogram_transform(input, output, 
+                                        cdf_r_buffer.get_ptr(), 
+                                        cdf_g_buffer.get_ptr(), 
+                                        cdf_b_buffer.get_ptr(), stream);
+}
+
+bool HistogramKernelManager::compute_rgb_histograms(const ImageBuffer& input, int* hist_r, int* hist_g, int* hist_b,
+                                                    cudaStream_t stream) const {
+    if (!initialized_) {
+        std::cerr << "Histogram kernel manager not initialized" << std::endl;
+        return false;
+    }
+    
+    const ImageMetadata& metadata = input.get_metadata();
+    
+    if (metadata.channels != 3) {
+        std::cerr << "RGB histogram requires 3-channel input" << std::endl;
+        return false;
+    }
+    
+    CUDA_CHECK(cudaMemsetAsync(hist_r, 0, HIST_SIZE * sizeof(int), stream));
+    CUDA_CHECK(cudaMemsetAsync(hist_g, 0, HIST_SIZE * sizeof(int), stream));
+    CUDA_CHECK(cudaMemsetAsync(hist_b, 0, HIST_SIZE * sizeof(int), stream));
+    
+    dim3 block_size = calculate_block_size();
+    dim3 grid_size = calculate_grid_size(metadata.width * metadata.height);
+    
+    histogram_rgb_kernel<<<grid_size, block_size, 0, stream>>>(
+        input.get_device_ptr(), hist_r, hist_g, hist_b,
+        metadata.width, metadata.height);
+    
+    CUDA_CHECK_LAST();
+    return true;
+}
+
+bool HistogramKernelManager::apply_rgb_histogram_transform(const ImageBuffer& input, ImageBuffer& output,
+                                                          const float* cdf_r, const float* cdf_g, const float* cdf_b,
+                                                          cudaStream_t stream) const {
+    const ImageMetadata& metadata = input.get_metadata();
+    
+    if (metadata.channels != 3) {
+        return apply_histogram_transform(input, output, cdf_r, stream);
+    }
+    
+    dim3 block_size = calculate_block_size();
+    dim3 grid_size = calculate_grid_size(metadata.width * metadata.height);
+    
+    histogram_equalization_rgb_kernel<<<grid_size, block_size, 0, stream>>>(
+        input.get_device_ptr(), output.get_device_ptr(), 
+        cdf_r, cdf_g, cdf_b,
+        metadata.width, metadata.height);
+    
+    CUDA_CHECK_LAST();
+    return true;
 }
 
 void HistogramKernelManager::benchmark_histogram_kernels(const ImageBuffer& input, int iterations) const {
@@ -267,6 +331,25 @@ __global__ void histogram_shared_kernel(const unsigned char* input, int* histogr
             atomicAdd(&histogram[i], shared_hist[i]);
         }
     }
+}
+
+__global__ void histogram_rgb_kernel(const unsigned char* input, 
+                                    int* hist_r, int* hist_g, int* hist_b,
+                                    int width, int height) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int total_pixels = width * height;
+    
+    if (idx >= total_pixels) return;
+    
+    int pixel_idx = idx * 3;
+    
+    unsigned char r = input[pixel_idx];
+    unsigned char g = input[pixel_idx + 1];
+    unsigned char b = input[pixel_idx + 2];
+    
+    atomicAdd(&hist_r[r], 1);
+    atomicAdd(&hist_g[g], 1);
+    atomicAdd(&hist_b[b], 1);
 }
 
 __global__ void compute_cdf_kernel(const int* histogram, float* cdf, int total_pixels) {

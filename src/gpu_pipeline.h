@@ -42,6 +42,8 @@ public:
     void set_output_directory(const std::string& output_dir);
     void set_block_size(int block_size);
     void enable_streaming(bool enable) { streaming_enabled_ = enable; }
+    void set_rgb_mode(bool rgb_mode) { rgb_mode_ = rgb_mode; }
+    bool is_rgb_mode() const { return rgb_mode_; }
     
 private:
     bool rgb_mode_;

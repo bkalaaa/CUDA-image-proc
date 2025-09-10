@@ -40,6 +40,9 @@ public:
     bool compute_histogram_shared(const ImageBuffer& input, int* histogram,
                                  cudaStream_t stream = 0) const;
     
+    bool compute_rgb_histograms(const ImageBuffer& input, int* hist_r, int* hist_g, int* hist_b,
+                               cudaStream_t stream = 0) const;
+    
     void benchmark_histogram_kernels(const ImageBuffer& input, int iterations = 10) const;
     
     const HistogramConfig& get_config() const { return config_; }
@@ -52,6 +55,10 @@ private:
     bool apply_histogram_transform(const ImageBuffer& input, ImageBuffer& output,
                                   const float* cdf, cudaStream_t stream) const;
     
+    bool apply_rgb_histogram_transform(const ImageBuffer& input, ImageBuffer& output,
+                                      const float* cdf_r, const float* cdf_g, const float* cdf_b,
+                                      cudaStream_t stream) const;
+    
     dim3 calculate_grid_size(int total_pixels) const;
     dim3 calculate_block_size() const;
 };
@@ -61,6 +68,10 @@ __global__ void histogram_kernel(const unsigned char* input, int* histogram,
 
 __global__ void histogram_shared_kernel(const unsigned char* input, int* histogram,
                                        int width, int height, int channels);
+
+__global__ void histogram_rgb_kernel(const unsigned char* input, 
+                                    int* hist_r, int* hist_g, int* hist_b,
+                                    int width, int height);
 
 __global__ void compute_cdf_kernel(const int* histogram, float* cdf, int total_pixels);
 

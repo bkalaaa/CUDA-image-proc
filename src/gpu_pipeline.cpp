@@ -248,7 +248,10 @@ cv::Mat GPUPipeline::load_and_prepare_image(const std::string& input_path) {
     cv::Mat image;
     
     if (rgb_mode_) {
-        image = cv::imread(input_path, cv::IMREAD_COLOR);
+        cv::Mat bgr_image = cv::imread(input_path, cv::IMREAD_COLOR);
+        if (!bgr_image.empty()) {
+            cv::cvtColor(bgr_image, image, cv::COLOR_BGR2RGB);
+        }
     } else {
         cv::Mat color_image = cv::imread(input_path, cv::IMREAD_COLOR);
         if (!color_image.empty()) {
@@ -274,7 +277,14 @@ bool GPUPipeline::save_processed_image(const cv::Mat& image, const std::string& 
         compression_params.push_back(3);
     }
     
-    return cv::imwrite(output_path, image, compression_params);
+    cv::Mat output_image;
+    if (rgb_mode_ && image.channels() == 3) {
+        cv::cvtColor(image, output_image, cv::COLOR_RGB2BGR);
+    } else {
+        output_image = image;
+    }
+    
+    return cv::imwrite(output_path, output_image, compression_params);
 }
 
 std::string GPUPipeline::generate_output_filename(const std::string& input_path, 
